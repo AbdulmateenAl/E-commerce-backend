@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/style.css') }}">
+    <title>Document</title>
+</head>
+<body>
+    {% block content %}
+    <div class="header">
+        <h1>Home</h1>
+        <p>Welcome to the home page</p>
+        <a href="{{ url_for('get_orders') }}" class="orders">Orders</a>
+    </div>
+    {% for name, price in products %}
+        <div class="product">
+            <h3 id="product_name">{{ name }}</h3>
+            <div class="price_quantity">
+                <h3>${{ price }}</h3>
+                <form action="/products" method="POST">
+                    <input type="number" name="quantity" id="quantity" placeholder="Quantity" min="1", max="10", step="1">
+                    <a href="{{ url_for('create_order', user=username) }}"><button type="submit">order</button></a>
+                </form>
+            </div>
+        </div>
+    {% endfor %}
+    {% endblock %}
+    <script>
+        document.querySelectorAll('.product').forEach(product => {
+            product.querySelector('form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const name = product.querySelector('#product_name').textContent;
+                const quantity = product.querySelector('#quantity').value;
+
+                // Getting the user from the path
+                const path = window.location.pathname
+                const value = path.split("/") // Splits with "/" and makes a list ["", "user"]
+                const user = value[1]
+                console.log(user)
+
+                
+                if (!name || !quantity) {
+                    return alert('Please put in your quantity');
+                }
+                
+                fetch(`/${user}/order`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        "name": name,
+                        "quantity": quantity})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    product.querySelector('#quantity').value = "";
+                    console.log(data);
+                    return alert("Order successful");
+                });
+            });
+        });
+    </script>
+</body>
+</html>

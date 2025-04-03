@@ -1,0 +1,84 @@
+{
+    "products": [
+        {
+            "name": "Bag",
+            "price": 100
+        },
+        {
+            "name": "Bag",
+            "price": 100
+        },
+        {
+            "name": "Bag",
+            "price": 100
+        },
+        {
+            "name": "Shoe",
+            "price": 100
+        },
+        {
+            "name": "Cap",
+            "price": 100
+        },
+        {
+            "name": "Cap",
+            "price": 100
+        },
+        {
+            "name": "Cap",
+            "price": 100
+        },
+        {
+            "name": "Cap",
+            "price": 10
+        },
+        {
+            "name": "Cap",
+            "price": 10
+        },
+        {
+            "name": "Cap",
+            "price": 10
+        },
+        {
+            "name": "T-Shirt",
+            "price": 30
+        },
+        {
+            "name": "Samsung Galaxy S25 Ultra",
+            "price": 2699
+        },
+        {
+            "name": "Samsung Galaxy S25 Ultra",
+            "price": 2699
+        },
+        {
+            "name": "T-Shirt",
+            "price": 30
+        },
+        {
+            "name": "T-Shirt",
+            "price": 30
+        },
+        {
+            "name": "T-Shirt",
+            "price": 30
+        },
+        {
+            "name": "T-Shirt",
+            "price": 30
+        },
+        {
+            "name": "T-Shirt",
+            "price": 30
+        },
+        {
+            "name": "Bike",
+            "price": 1000
+        },
+        {
+            "name": "Bike",
+            "price": 1000
+        }
+    ]
+}

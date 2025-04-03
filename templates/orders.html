@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/style.css') }}">
+    <title>Document</title>
+</head>
+<body>
+    {% block content %}
+    <h1>Orders</h1>
+    <table class="order_table">
+        <tr>
+            <th>Name</th>
+            <th>Price</th>
+            <th>Quantity</th>
+        </tr>
+        {% for id, name, price, quantity in orders %}
+        <tr>
+            <td>{{ name }}</td>
+            <td>{{ price }}</td>
+            <td>{{ quantity }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% endblock %}
+</body>
+</html>
