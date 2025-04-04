@@ -21,7 +21,8 @@ from flask_swagger_ui import get_swaggerui_blueprint
 secret_key = os.getenv("secret_key")
 
 app = Flask(__name__)
-CORS(app)
+# CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app, resources={r"/*": {"origins": ["https://yourfrontend.com", "http://localhost:3000"]}})
 app.config['SECRET_KEY'] = secret_key
 
 SWAGGER_URL = '/api/docs'  # URL for exposing Swagger UI (without trailing '/')
@@ -129,8 +130,15 @@ def register_user():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
+        if request.content_type == 'application/json':
+            response = request.get_json()
+        else:
+            response = request.form
+        if not response:
+            return jsonify({"message": "No login data provided"}), 400
+        
+        username = response.get("username")
+        password = response.get("password")
 
         if not username or not password:
             return jsonify({"message": "Missing username or password"}), 400
@@ -151,15 +159,16 @@ def login():
                     app.config['SECRET_KEY'],
                     algorithm="HS256"
                 )
-                response = make_response(redirect(url_for("home", user=username)))
-                response.set_cookie(
-                    'token',
-                    token,
-                    httponly=True,
-                    secure=True,
-                    samesite='Strict'
-                )
-                return response
+                # If you want to set the token in a cookie
+                # response = make_response(redirect(url_for("home", user=username)))
+                # response.set_cookie(
+                #     'token',
+                #     token,
+                #     httponly=True,
+                #     secure=True,
+                #     samesite='Strict'
+                # )
+                return jsonify({"message": "Login successful", "token": token}), 200
         except Exception as e:
             return jsonify({"message": "An error occurred while logging in", "error": str(e)}), 500
 
