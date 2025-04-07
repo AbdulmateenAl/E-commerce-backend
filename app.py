@@ -178,6 +178,21 @@ def login():
 def landing_page():
     return redirect(url_for("login"))
 
+@app.route("/users", methods=["GET"])
+def get_users():
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+                    SELECT username FROM users
+                    """)
+        users = cur.fetchall()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        return jsonify({"message": str(e)})
+    return jsonify({"message": "Gotten all users", "users": users})
+
 @app.route('/<user>', methods=['GET'])
 @limiter.exempt
 @validate_token
@@ -284,21 +299,21 @@ def create_product(user):
     return jsonify({"message": "Product created successfully", "product_name": response['name']}), 201
 
 
-@app.route('/products', methods=['GET'])  # Fetches all products
-def get_products():
+@app.route('/<user>/products', methods=['GET'])  # Fetches all products
+def get_products(user):
     # Connects to the database and fetches all products
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(
-            "CREATE INDEX idx_products ON products(name, price); SELECT name, price FROM products")
+            "CREATE INDEX idx_products ON products(name, price); SELECT id, name, price FROM products")
         products = cur.fetchall()
         cur.close()
         conn.close()
     except Exception as e:
         return jsonify({"message": "An error occurred while fetching the products", "error": str(e)}), 500
 
-    return jsonify({"message": "Products fetched successfully", "products": products}), 200
+    return jsonify({"message": "Products fetched successfully", "products": [{"id": p[0], "name": p[1], "price": p[2]} for p in products] }), 200
 
 
 @app.route('/product/<int:id>', methods=['GET'])  # Fetches a product by id
@@ -400,21 +415,26 @@ def create_order(user):
     return jsonify({"message": "Order created successfully"}), 201
 
 
-@app.route('/orders', methods=['GET'])  # Fetches all orders
-def get_orders():
+@app.route('/<user>/orders', methods=['GET'])  # Fetches all orders
+def get_orders(user):
     # Connects to the database and fetches all orders
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(
-            "SELECT p.id, p.name, p.price, o.quantity FROM products p INNER JOIN orders o ON p.name = o.product_name INNER JOIN users u ON u.id = p.u_id;")
+            """SELECT id FROM users WHERE username = %s""", (user, )
+        )
+        user_id = cur.fetchone()[0]
+        cur.execute(
+            """SELECT o.order_id, p.name, p.price, o.quantity FROM products p JOIN orders o ON p.name = o.product_name WHERE o.u_id = %s;""", (user_id,))
         orders = cur.fetchall()
         cur.close()
         conn.close()
     except Exception as e:
         return jsonify({"message": "An error occurred while fetching the orders", "error": str(e)}), 500
 
-    return render_template("orders.html", orders=orders)
+    #return render_template("orders.html", orders=orders)
+    return jsonify({"orders": [{"id": o[0], "name": o[1], "price": o[2], "quantity": o[3]} for o in orders] }), 200
 
 
 @app.route('/order/<int:id>', methods=['GET'])  # Fetches an order by id
