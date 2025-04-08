@@ -52,21 +52,6 @@ cloudinary.config(
 # auto_crop_url, _ = cloudinary_url("shoes", width=500, height=500, crop="auto", gravity="auto")
 # print(auto_crop_url)
 
-@app.route("/upload", methods=["POST"])
-def upload_image():
-    if "file" not in request.files:
-        return jsonify({"message": "No file path"})
-    
-    file = request.files["file"]
-    if file.filename == "":
-        return jsonify({"message": "No file selected"})
-    
-    try:
-        result = upload(file)
-        return jsonify({"url": result["secure_url"]})
-    except Exception as e:
-        return jsonify({"message": str(e)})
-
 SWAGGER_URL = '/api/docs'  # URL for exposing Swagger UI (without trailing '/')
 API_URL = '/static/data/swagger.json'  # Our API url (can of course be a local resource)
 
@@ -306,9 +291,13 @@ def admin(user):
 
 @app.route('/<user>/product', methods=['POST'])  # Creates a product
 def create_product(user):
+    print(request.form)
+    print(request.files['file'])
     if request.content_type == 'application/json':
         response = request.get_json()
     else:
+        if "file" in request.files:
+            file = request.files["file"]
         response = request.form
     if not response:
         # Returns an error if no product is provided
@@ -330,27 +319,65 @@ def create_product(user):
     cur.close()
     conn.close()
 
+    result = upload(file, public_id=response['product_name'])
+
     # Connects to the database and inserts the product
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(
-            """CREATE TABLE IF NOT EXISTS products(
+            """CREATE TABLE IF NOT EXISTS test(
             id SERIAL PRIMARY KEY,
             name VARCHAR(255),
             price FLOAT,
+            quantity INT,
+            imageUrl VARCHAR(255),
             u_id INT,
             FOREIGN KEY (u_id) REFERENCES users(id)
             )""")
-        cur.execute("""INSERT INTO products (name, price, u_id) VALUES (%s, %s, %s);""",
-                    (response['name'], response['price'], user_id))
+        cur.execute("""INSERT INTO test (name, price, quantity, imageUrl, u_id) VALUES (%s, %s, %s, %s, %s);""",
+                    (response['product_name'], response['product_price'], response['product_quantity'], result['secure_url'], user_id))
         conn.commit()
         cur.close()
         conn.close()
     except Exception as e:
         return jsonify({"message": "An error occurred while creating the product", "error": str(e)}), 500
 
-    return jsonify({"message": "Product created successfully", "product_name": response['name']}), 201
+    return jsonify({"message": "Product created successfully", "product_name": response['product_name']}), 201
+
+@app.route("/upload", methods=["POST"])
+def upload_image():
+    if "file" not in request.files:
+        return jsonify({"message": "No file path"})
+    
+    file = request.files["file"]
+    if file.filename == "":
+        return jsonify({"message": "No file selected"})
+    
+    try:
+        result = upload(file)
+        return jsonify({"url": result["secure_url"]})
+    except Exception as e:
+        return jsonify({"message": str(e)})
+
+@app.route('/<user>/test', methods=['GET'])  # Fetches all products
+def get_test_products(user):
+    # Connects to the database and fetches all products
+    optimize_url, _ = cloudinary_url("test", fetch_format="auto", quality="auto")
+    auto_crop_url, _ = cloudinary_url("shoes", width=500, height=500, crop="auto", gravity="auto")
+    print(auto_crop_url)
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT id, name, price, quantity, imageUrl FROM test")
+        products = cur.fetchall()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        return jsonify({"message": "An error occurred while fetching the products", "error": str(e)}), 500
+
+    return jsonify({"message": "Products fetched successfully", "products": [{"id": p[0], "name": p[1], "price": p[2], "quantity": p[3], "imageUrl": p[4]} for p in products] }), 200
 
 
 @app.route('/<user>/products', methods=['GET'])  # Fetches all products
