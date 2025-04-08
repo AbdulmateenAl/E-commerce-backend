@@ -6,6 +6,10 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_cors import CORS
 
+import cloudinary
+from cloudinary.uploader import upload
+from cloudinary.utils import cloudinary_url
+
 from dotenv import load_dotenv
 
 import psycopg2
@@ -18,12 +22,50 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 from flask_swagger_ui import get_swaggerui_blueprint
 
-secret_key = os.getenv("secret_key")
+load_dotenv()  # Loads environment variables
 
 app = Flask(__name__)
 # CORS(app, resources={r"/*": {"origins": "*"}})
 CORS(app, resources={r"/*": {"origins": ["https://yourfrontend.com", "http://localhost:3000"]}})
+
+secret_key = os.getenv("secret_key")
 app.config['SECRET_KEY'] = secret_key
+
+# Configuration       
+cloudinary.config( 
+    cloud_name = os.getenv("CLOUD_NAME"), 
+    api_key = os.getenv("API_KEY"), 
+    api_secret = os.getenv("API_SECRET"),
+    secure=True
+)
+
+# # Upload an image
+# upload_result = cloudinary.uploader.upload("https://res.cloudinary.com/demo/image/upload/getting-started/shoes.jpg",
+#                                            public_id="shoes")
+# print(upload_result["secure_url"])
+
+# # Optimize delivery by resizing and applying auto-format and auto-quality
+# optimize_url, _ = cloudinary_url("shoes", fetch_format="auto", quality="auto")
+# print(optimize_url)
+
+# # Transform the image: auto-crop to square aspect_ratio
+# auto_crop_url, _ = cloudinary_url("shoes", width=500, height=500, crop="auto", gravity="auto")
+# print(auto_crop_url)
+
+@app.route("/upload", methods=["POST"])
+def upload_image():
+    if "file" not in request.files:
+        return jsonify({"message": "No file path"})
+    
+    file = request.files["file"]
+    if file.filename == "":
+        return jsonify({"message": "No file selected"})
+    
+    try:
+        result = upload(file)
+        return jsonify({"url": result["secure_url"]})
+    except Exception as e:
+        return jsonify({"message": str(e)})
 
 SWAGGER_URL = '/api/docs'  # URL for exposing Swagger UI (without trailing '/')
 API_URL = '/static/data/swagger.json'  # Our API url (can of course be a local resource)
@@ -47,7 +89,6 @@ swaggerui_blueprint = get_swaggerui_blueprint(
 
 app.register_blueprint(swaggerui_blueprint)
 
-load_dotenv()  # Loads environment variables
 user = os.getenv("user")
 password = os.getenv("password")
 dbname = os.getenv("dbname")
@@ -184,14 +225,27 @@ def get_users():
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
-                    SELECT username FROM users
+                    SELECT id, username FROM users
                     """)
         users = cur.fetchall()
         cur.close()
         conn.close()
     except Exception as e:
         return jsonify({"message": str(e)})
-    return jsonify({"message": "Gotten all users", "users": users})
+    return jsonify({"message": "Gotten all users", "users": [{"id": u[0], "username": u[1]} for u in users]})
+
+@app.route('/user/<int:id>', methods=["DELETE"])
+def delete_user(id):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM users WHERE id = %s", (id,))
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        return jsonify({"message": str(e)})
+    return jsonify({"message": "Deleted user successfully"})
 
 @app.route('/<user>', methods=['GET'])
 @limiter.exempt
