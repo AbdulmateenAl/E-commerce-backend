@@ -345,6 +345,19 @@ def create_product(user):
 
     return jsonify({"message": "Product created successfully", "product_name": response['product_name']}), 201
 
+@app.route("/category", methods=["GET"])
+def get_category():
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT id, category FROM products")
+        category = cur.fetchall()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        return jsonify({"message": str(e)})
+    return jsonify({"category": [{"id": c[0], "category": c[1]} for c in category]})
+
 @app.route("/upload", methods=["POST"])
 def upload_image():
     if "file" not in request.files:
@@ -365,12 +378,12 @@ def get_test_products(user):
     # Connects to the database and fetches all products
     optimize_url, _ = cloudinary_url("test", fetch_format="auto", quality="auto")
     auto_crop_url, _ = cloudinary_url("shoes", width=500, height=500, crop="auto", gravity="auto")
-    print(auto_crop_url)
+    #print(auto_crop_url)
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(
-            "SELECT id, name, price, quantity, imageUrl FROM test")
+            "SELECT id, name, price, quantity, imageurl FROM test")
         products = cur.fetchall()
         cur.close()
         conn.close()
@@ -387,14 +400,14 @@ def get_products(user):
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(
-            "CREATE INDEX idx_products ON products(name, price); SELECT id, name, price FROM products")
+            "SELECT id, name, price, image_url, quantity FROM products")
         products = cur.fetchall()
         cur.close()
         conn.close()
     except Exception as e:
         return jsonify({"message": "An error occurred while fetching the products", "error": str(e)}), 500
 
-    return jsonify({"message": "Products fetched successfully", "products": [{"id": p[0], "name": p[1], "price": p[2]} for p in products] }), 200
+    return jsonify({"message": "Products fetched successfully", "products": [{"id": p[0], "name": p[1], "price":p[2], "imageUrl": p[3], "quantity": p[4]} for p in products] }), 200
 
 
 @app.route('/product/<int:id>', methods=['GET'])  # Fetches a product by id
