@@ -26,7 +26,8 @@ load_dotenv()  # Loads environment variables
 
 app = Flask(__name__)
 # CORS(app, resources={r"/*": {"origins": "*"}})
-CORS(app, resources={r"/*": {"origins": ["https://yourfrontend.com", "http://localhost:3000"]}})
+# CORS(app, resources={r"/*": {"origins": ["https://yourfrontend.com", "http://localhost:3000", "http://172.16.120.218:3000"]}})
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 secret_key = os.getenv("secret_key")
 app.config['SECRET_KEY'] = secret_key
@@ -314,8 +315,8 @@ def create_product(user):
     cur = conn.cursor()
     cur.execute("""
                 SELECT id FROM users WHERE username = %s""", (user,))
-    result = cur.fetchone()
-    user_id = result[0]
+    user_details = cur.fetchone()
+    user_id = user_details[0]
     cur.close()
     conn.close()
 
@@ -332,11 +333,12 @@ def create_product(user):
             price FLOAT,
             quantity INT,
             imageUrl VARCHAR(255),
+            category VARCHAR(255),
             u_id INT,
             FOREIGN KEY (u_id) REFERENCES users(id)
             )""")
-        cur.execute("""INSERT INTO test (name, price, quantity, imageUrl, u_id) VALUES (%s, %s, %s, %s, %s);""",
-                    (response['product_name'], response['product_price'], response['product_quantity'], result['secure_url'], user_id))
+        cur.execute("""INSERT INTO test (name, price, quantity, imageUrl, category, u_id) VALUES (%s, %s, %s, %s, %s, %s);""",
+                    (response['product_name'], response['product_price'], response['product_quantity'], result['secure_url'], response["category"], user_id))
         conn.commit()
         cur.close()
         conn.close()
