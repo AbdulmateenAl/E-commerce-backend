@@ -123,7 +123,7 @@ def validate_token(func):
 limiter = Limiter(
     get_remote_address,
     app=app,
-    default_limits=["100 per day", "20 per hour"],
+    default_limits=["10000000000 per day", "2000000 per hour"],
     storage_uri="memory://"
 )
 
