@@ -164,6 +164,8 @@ def login():
         if not response:
             return jsonify({"message": "No login data provided"}), 400
         
+        print(response)
+        
         username = response.get("username")
         password = response.get("password")
 
@@ -395,8 +397,8 @@ def get_test_products(user):
     return jsonify({"message": "Products fetched successfully", "products": [{"id": p[0], "name": p[1], "price": p[2], "quantity": p[3], "imageUrl": p[4]} for p in products] }), 200
 
 
-@app.route('/<user>/products', methods=['GET'])  # Fetches all products
-def get_products(user):
+@app.route('/products', methods=['GET'])  # Fetches all products
+def get_products():
     # Connects to the database and fetches all products
     try:
         conn = get_db_connection()
