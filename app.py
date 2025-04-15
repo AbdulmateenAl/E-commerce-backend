@@ -497,6 +497,7 @@ def create_order(user):
                     order_id SERIAL PRIMARY KEY,
                     product_name VARCHAR(255),
                     quantity INT,
+                    cart TEXT[],
                     u_id INT,
                     FOREIGN KEY (u_id) REFERENCES users(id)
                     );""")
@@ -524,7 +525,7 @@ def get_orders(user):
         )
         user_id = cur.fetchone()[0]
         cur.execute(
-            """SELECT o.order_id, p.name, p.price, o.quantity, o.total_amount FROM products p JOIN orders o ON p.name = o.product_name WHERE o.u_id = %s;""", (user_id,))
+            """SELECT o.order_id, p.name, p.price, o.quantity, o.total_amount, o.status, o.created_at, u.username FROM products p JOIN orders o ON p.name = o.product_name JOIN users u ON o.u_id = u.id WHERE o.u_id = %s;""", (user_id,))
         orders = cur.fetchall()
         cur.close()
         conn.close()
@@ -532,7 +533,7 @@ def get_orders(user):
         return jsonify({"message": "An error occurred while fetching the orders", "error": str(e)}), 500
 
     #return render_template("orders.html", orders=orders)
-    return jsonify({"orders": [{"id": o[0], "name": o[1], "price": o[2], "quantity": o[3], "totalAmount": o[4]} for o in orders] }), 200
+    return jsonify({"orders": [{"id": o[0], "name": o[1], "price": o[2], "quantity": o[3], "totalAmount": o[4], "status": o[5], "created_at": o[6], "user": o[7]} for o in orders] }), 200
 
 
 @app.route('/order/<int:id>', methods=['GET'])  # Fetches an order by id
