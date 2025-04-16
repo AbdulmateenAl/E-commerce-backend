@@ -32,11 +32,11 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 secret_key = os.getenv("secret_key")
 app.config['SECRET_KEY'] = secret_key
 
-# Configuration       
-cloudinary.config( 
-    cloud_name = os.getenv("CLOUD_NAME"), 
-    api_key = os.getenv("API_KEY"), 
-    api_secret = os.getenv("API_SECRET"),
+# Configuration
+cloudinary.config(
+    cloud_name=os.getenv("CLOUD_NAME"),
+    api_key=os.getenv("API_KEY"),
+    api_secret=os.getenv("API_SECRET"),
     secure=True
 )
 
@@ -54,11 +54,13 @@ cloudinary.config(
 # print(auto_crop_url)
 
 SWAGGER_URL = '/api/docs'  # URL for exposing Swagger UI (without trailing '/')
-API_URL = '/static/data/swagger.json'  # Our API url (can of course be a local resource)
+# Our API url (can of course be a local resource)
+API_URL = '/static/data/swagger.json'
 
 # Call factory function to create our blueprint
 swaggerui_blueprint = get_swaggerui_blueprint(
-    SWAGGER_URL,  # Swagger UI static files will be mapped to '{SWAGGER_URL}/dist/'
+    # Swagger UI static files will be mapped to '{SWAGGER_URL}/dist/'
+    SWAGGER_URL,
     API_URL,
     config={  # Swagger UI config overrides
         'app_name': "Test application"
@@ -127,6 +129,7 @@ limiter = Limiter(
     storage_uri="memory://"
 )
 
+
 @app.route('/register', methods=['GET', 'POST'])
 def register_user():
     if request.method == 'POST':
@@ -135,7 +138,7 @@ def register_user():
 
         if not username or not password:
             return jsonify({"message": "Missing username or password"}), 400
-        
+
         hashed_password = generate_password_hash(password)
         try:
             conn = get_db_connection()
@@ -151,8 +154,8 @@ def register_user():
         except Exception as e:
             return jsonify({"message": "An error occurred while creating the user", "error": str(e)}), 500
 
-
     return render_template('register.html')
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -163,19 +166,20 @@ def login():
             response = request.form
         if not response:
             return jsonify({"message": "No login data provided"}), 400
-        
+
         print(response)
-        
+
         username = response.get("username")
         password = response.get("password")
 
         if not username or not password:
             return jsonify({"message": "Missing username or password"}), 400
-        
+
         try:
             conn = get_db_connection()
             cur = conn.cursor()
-            cur.execute("SELECT username, password FROM users WHERE username = %s", (username,))
+            cur.execute(
+                "SELECT username, password FROM users WHERE username = %s", (username,))
             db_username, db_password = cur.fetchone()
             cur.close()
             conn.close()
@@ -203,9 +207,11 @@ def login():
 
     return render_template('login.html')
 
+
 @app.route("/", methods=["GET"])
 def landing_page():
     return redirect(url_for("login"))
+
 
 @app.route("/users", methods=["GET"])
 def get_users():
@@ -222,6 +228,7 @@ def get_users():
         return jsonify({"message": str(e)})
     return jsonify({"message": "Gotten all users", "users": [{"id": u[0], "username": u[1]} for u in users]})
 
+
 @app.route('/user/<int:id>', methods=["DELETE"])
 def delete_user(id):
     try:
@@ -234,6 +241,7 @@ def delete_user(id):
     except Exception as e:
         return jsonify({"message": str(e)})
     return jsonify({"message": "Deleted user successfully"})
+
 
 @app.route('/<user>', methods=['GET'])
 @limiter.exempt
@@ -252,7 +260,7 @@ def home(user):
         if not real_user:
             return redirect(url_for("login"))
         print(real_user[0])
-        
+
         try:
             conn = get_db_connection()
             cur = conn.cursor()
@@ -267,6 +275,7 @@ def home(user):
         return jsonify({"message": str(e)})
     return render_template('home.html', products=products, username=real_user[0])
 
+
 @app.route('/auth', methods=['GET'])
 @validate_token
 def auth():
@@ -278,7 +287,8 @@ def admin(user):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("SELECT username FROM users WHERE role = %s AND username = %s", ("admin", user))
+        cur.execute(
+            "SELECT username FROM users WHERE role = %s AND username = %s", ("admin", user))
         db_username = cur.fetchone()
         cur.close()
         conn.close()
@@ -286,10 +296,8 @@ def admin(user):
             return render_template("admin_page.html")
     except Exception as e:
         return jsonify({"message": str(e)})
-    
-    return jsonify({"message": "You are not an authorized user"})
-    
 
+    return jsonify({"message": "You are not an authorized user"})
 
 
 @app.route('/<user>/product', methods=['POST'])  # Creates a product
@@ -349,6 +357,7 @@ def create_product(user):
 
     return jsonify({"message": "Product created successfully", "product_name": response['product_name']}), 201
 
+
 @app.route("/category", methods=["GET"])
 def get_category():
     try:
@@ -362,27 +371,31 @@ def get_category():
         return jsonify({"message": str(e)})
     return jsonify({"category": [{"id": c[0], "category": c[1]} for c in category]})
 
+
 @app.route("/upload", methods=["POST"])
 def upload_image():
     if "file" not in request.files:
         return jsonify({"message": "No file path"})
-    
+
     file = request.files["file"]
     if file.filename == "":
         return jsonify({"message": "No file selected"})
-    
+
     try:
         result = upload(file)
         return jsonify({"url": result["secure_url"]})
     except Exception as e:
         return jsonify({"message": str(e)})
 
+
 @app.route('/<user>/test', methods=['GET'])  # Fetches all products
 def get_test_products(user):
     # Connects to the database and fetches all products
-    optimize_url, _ = cloudinary_url("test", fetch_format="auto", quality="auto")
-    auto_crop_url, _ = cloudinary_url("shoes", width=500, height=500, crop="auto", gravity="auto")
-    #print(auto_crop_url)
+    optimize_url, _ = cloudinary_url(
+        "test", fetch_format="auto", quality="auto")
+    auto_crop_url, _ = cloudinary_url(
+        "shoes", width=500, height=500, crop="auto", gravity="auto")
+    # print(auto_crop_url)
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -394,7 +407,7 @@ def get_test_products(user):
     except Exception as e:
         return jsonify({"message": "An error occurred while fetching the products", "error": str(e)}), 500
 
-    return jsonify({"message": "Products fetched successfully", "products": [{"id": p[0], "name": p[1], "price": p[2], "quantity": p[3], "imageUrl": p[4]} for p in products] }), 200
+    return jsonify({"message": "Products fetched successfully", "products": [{"id": p[0], "name": p[1], "price": p[2], "quantity": p[3], "imageUrl": p[4]} for p in products]}), 200
 
 
 @app.route('/products', methods=['GET'])  # Fetches all products
@@ -411,7 +424,7 @@ def get_products():
     except Exception as e:
         return jsonify({"message": "An error occurred while fetching the products", "error": str(e)}), 500
 
-    return jsonify({"message": "Products fetched successfully", "products": [{"id": p[0], "name": p[1], "price":p[2], "imageUrl": p[3], "quantity": p[4]} for p in products] }), 200
+    return jsonify({"message": "Products fetched successfully", "products": [{"id": p[0], "name": p[1], "price": p[2], "imageUrl": p[3], "quantity": p[4]} for p in products]}), 200
 
 
 @app.route('/product/<int:id>', methods=['GET'])  # Fetches a product by id
@@ -476,10 +489,11 @@ def create_order(user):
         response = request.form
 
     print(response)
+    print(json.dumps(response.get('cart')))
 
     if not response:
         return jsonify({"message": "No order provided"}), 400
-    
+
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("""
@@ -497,14 +511,17 @@ def create_order(user):
                     order_id SERIAL PRIMARY KEY,
                     product_name VARCHAR(255),
                     quantity INT,
-                    cart TEXT[],
+                    status VARCHAR(255) DEFAULT 'pending',
+                    total_amount FLOAT(20),
+                    created_at TIMESTAMPTZ DEFAULT NOW(),
+                    cart JSONB,
                     u_id INT,
                     FOREIGN KEY (u_id) REFERENCES users(id)
                     );""")
         cur.execute("""INSERT INTO orders
-                    (product_name, quantity, u_id)
+                    (total_amount, cart, u_id)
                     VALUES (%s, %s, %s);""",
-                    (response.get('name'), response.get('quantity'), user_id))
+                    (response.get('total_amount'), json.dumps(response.get('cart')), user_id))
         conn.commit()
         cur.close()
         conn.close()
@@ -515,7 +532,30 @@ def create_order(user):
 
 
 @app.route('/<user>/orders', methods=['GET'])  # Fetches all orders
-def get_orders(user):
+def get_all_orders(user):
+    # Connects to the database and fetches all orders
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(
+            """SELECT id FROM users WHERE username = %s""", (user, )
+        )
+        user_id = cur.fetchone()[0]
+        cur.execute(
+            """SELECT o.order_id, p.name, p.price, o.quantity, o.total_amount, o.status, o.created_at, u.username, o.cart FROM products p JOIN orders o ON p.name = o.product_name JOIN users u ON o.u_id = u.id;""")
+        orders = cur.fetchall()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        return jsonify({"message": "An error occurred while fetching the orders", "error": str(e)}), 500
+
+    # return render_template("orders.html", orders=orders)
+    return jsonify({"orders": [{"id": o[0], "name": o[1], "price": o[2], "quantity": o[3], "totalAmount": o[4], "status": o[5], "created_at": o[6], "user": o[7], "cart": o[8]} for o in orders]}), 200
+
+
+# Fetches a particular user orders
+@app.route('/<user>/porders', methods=['GET'])
+def get_user_orders(user):
     # Connects to the database and fetches all orders
     try:
         conn = get_db_connection()
@@ -532,8 +572,8 @@ def get_orders(user):
     except Exception as e:
         return jsonify({"message": "An error occurred while fetching the orders", "error": str(e)}), 500
 
-    #return render_template("orders.html", orders=orders)
-    return jsonify({"orders": [{"id": o[0], "name": o[1], "price": o[2], "quantity": o[3], "totalAmount": o[4], "status": o[5], "created_at": o[6], "user": o[7]} for o in orders] }), 200
+    # return render_template("orders.html", orders=orders)
+    return jsonify({"orders": [{"id": o[0], "name": o[1], "price": o[2], "quantity": o[3], "totalAmount": o[4], "status": o[5], "created_at": o[6], "user": o[7]} for o in orders]}), 200
 
 
 @app.route('/order/<int:id>', methods=['GET'])  # Fetches an order by id
@@ -567,7 +607,7 @@ def delete_order(id):
     return jsonify({"message": "Order deleted successfully"}), 200
 
 
-@app.route('/order/<int:id>', methods=['PUT'])  # Updates an order by id
+@app.route('/order/<int:id>', methods=['PATCH'])  # Updates an order by id
 def update_order(id):
     if request.content_type == "application/json":
         response = request.get_json()  # Gets the order from the request
@@ -581,8 +621,8 @@ def update_order(id):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("UPDATE orders SET quantity = %s WHERE order_id = %s",
-                    (response['quantity'], id))
+        cur.execute("UPDATE orders SET status = %s WHERE order_id = %s",
+                    (response['status'], id))
         conn.commit()
         cur.close()
         conn.close()
