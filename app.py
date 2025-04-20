@@ -537,20 +537,23 @@ def get_all_orders(user):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute(
-            """SELECT id FROM users WHERE username = %s""", (user, )
-        )
-        user_id = cur.fetchone()[0]
-        cur.execute(
-            """SELECT o.order_id, p.name, p.price, o.quantity, o.total_amount, o.status, o.created_at, u.username, o.cart FROM products p JOIN orders o ON p.name = o.product_name JOIN users u ON o.u_id = u.id;""")
-        orders = cur.fetchall()
-        cur.close()
-        conn.close()
+        # cur.execute(
+            # """SELECT o.order_id, p.name, p.price, o.quantity, o.total_amount, o.status, o.created_at, u.username, o.cart FROM products p JOIN orders o ON p.name = o.product_name JOIN users u ON o.u_id = u.id;""")
+        cur.execute("""
+                SELECT role FROM users WHERE username = %s""", (user,))
+        admin_user = cur.fetchone()[0]
+        if admin_user == "admin":
+            cur.execute("""
+                    SELECT o.order_id, o.total_amount, o.status, o.created_at, o.cart, u.username FROM orders o JOIN users u ON o.u_id = u.id;""")
+            orders = cur.fetchall()
+            cur.close()
+            conn.close()
+        else:
+            return jsonify({"message": "You are not authorizeds"})
     except Exception as e:
         return jsonify({"message": "An error occurred while fetching the orders", "error": str(e)}), 500
-
     # return render_template("orders.html", orders=orders)
-    return jsonify({"orders": [{"id": o[0], "name": o[1], "price": o[2], "quantity": o[3], "totalAmount": o[4], "status": o[5], "created_at": o[6], "user": o[7], "cart": o[8]} for o in orders]}), 200
+    return jsonify({"orders": [{"id": o[0], "totalAmount": o[1], "status": o[2], "created_at": o[3], "cart": o[4], "username": o[5]} for o in orders]}), 200
 
 
 # Fetches a particular user orders
@@ -565,7 +568,7 @@ def get_user_orders(user):
         )
         user_id = cur.fetchone()[0]
         cur.execute(
-            """SELECT o.order_id, p.name, p.price, o.quantity, o.total_amount, o.status, o.created_at, u.username FROM products p JOIN orders o ON p.name = o.product_name JOIN users u ON o.u_id = u.id WHERE o.u_id = %s;""", (user_id,))
+            """SELECT o.order_id, o.total_amount, o.status, o.created_at, o.cart, u.username FROM products p JOIN orders o ON p.name = o.product_name JOIN users u ON o.u_id = u.id WHERE o.u_id = %s;""", (user_id,))
         orders = cur.fetchall()
         cur.close()
         conn.close()
@@ -573,7 +576,7 @@ def get_user_orders(user):
         return jsonify({"message": "An error occurred while fetching the orders", "error": str(e)}), 500
 
     # return render_template("orders.html", orders=orders)
-    return jsonify({"orders": [{"id": o[0], "name": o[1], "price": o[2], "quantity": o[3], "totalAmount": o[4], "status": o[5], "created_at": o[6], "user": o[7]} for o in orders]}), 200
+    return jsonify({"orders": [{"id": o[0], "totalAmount": o[1], "status": o[2], "created_at": o[3], "cart": o[4], "user": o[5]} for o in orders]}), 200
 
 
 @app.route('/order/<int:id>', methods=['GET'])  # Fetches an order by id
