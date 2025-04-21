@@ -1,10 +1,12 @@
 import json
 import os
 
-from flask import Flask, request, jsonify, render_template, session, make_response, redirect, url_for
+from flask import Flask, Blueprint, request, jsonify, render_template, session, make_response, redirect, url_for
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_cors import CORS
+
+import stripe
 
 import cloudinary
 from cloudinary.uploader import upload
@@ -128,6 +130,74 @@ limiter = Limiter(
     default_limits=["10000000000 per day", "2000000 per hour"],
     storage_uri="memory://"
 )
+
+checkout = Blueprint('checkout', __name__)
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+YOUR_DOMAIN = os.getenv("LOCAL_DOMAIN")
+
+@checkout.route('/create-checkout-session', methods=['POST'])
+def create_checkout_session():
+    data = request.get_json()
+    cart = data['cart']
+    total_amount = data['total_amount']
+
+    try:
+        line_items = [
+            {
+                'price_data': {
+                    'currency': 'usd',
+                    'unit_amount': int(item['price'] * 100),
+                    'product_data': {
+                        'name': item['name'],
+                        'images': [item['imageUrl']],
+                    },
+                },
+                'quantity': item['quantity'],
+            } for item in cart
+        ]
+
+        session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=line_items,
+            mode='payment',
+            success_url=os.getenv('FRONTEND_URL') + '/success?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url=os.getenv('FRONTEND_URL') + '/cancel',
+            metadata={
+                'user_id': 'user-123',
+            }
+        )
+
+        return jsonify({ 'id': session.id })
+    except Exception as e:
+        return jsonify(error=str(e)), 400
+    
+
+webhook = Blueprint('webhook', __name__)
+endpoint_secret = os.getenv('STRIPE_WEBHOOK_SECRET')
+
+@webhook.route('/webhook', methods=['POST'])
+def stripe_webhook():
+    payload = request.data
+    sig_header = request.headers.get('Stripe-Signature')
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, endpoint_secret
+        )
+    except ValueError as e:
+        return 'Invalid payload', 400
+    except stripe.error.SignatureVerificationError as e:
+        return 'Invalid signature', 400
+
+    if event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+        # Store order in DB
+        print("Payment successful, store in DB:", session)
+
+        # Optionally retrieve line items or customer info
+        # stripe.checkout.Session.list_line_items(session.id)
+
+    return '', 200
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -417,14 +487,14 @@ def get_products():
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(
-            "SELECT id, name, price, image_url, quantity FROM products")
+            "SELECT id, name, price, image_url, quantity, category FROM products")
         products = cur.fetchall()
         cur.close()
         conn.close()
     except Exception as e:
         return jsonify({"message": "An error occurred while fetching the products", "error": str(e)}), 500
 
-    return jsonify({"message": "Products fetched successfully", "products": [{"id": p[0], "name": p[1], "price": p[2], "imageUrl": p[3], "quantity": p[4]} for p in products]}), 200
+    return jsonify({"message": "Products fetched successfully", "products": [{"id": p[0], "name": p[1], "price": p[2], "imageUrl": p[3], "quantity": p[4], "category": p[5]} for p in products]}), 200
 
 
 @app.route('/product/<int:id>', methods=['GET'])  # Fetches a product by id
