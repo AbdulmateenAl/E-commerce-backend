@@ -135,7 +135,7 @@ checkout = Blueprint('checkout', __name__)
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 YOUR_DOMAIN = os.getenv("LOCAL_DOMAIN")
 
-@checkout.route('/create-checkout-session', methods=['POST'])
+@app.route('/create-checkout-session', methods=['POST'])
 def create_checkout_session():
     data = request.get_json()
     cart = data['cart']
@@ -175,7 +175,7 @@ def create_checkout_session():
 webhook = Blueprint('webhook', __name__)
 endpoint_secret = os.getenv('STRIPE_WEBHOOK_SECRET')
 
-@webhook.route('/webhook', methods=['POST'])
+@app.route('/webhook', methods=['POST'])
 def stripe_webhook():
     payload = request.data
     sig_header = request.headers.get('Stripe-Signature')
