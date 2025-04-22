@@ -579,8 +579,6 @@ def create_order(user):
         cur = conn.cursor()
         cur.execute("""CREATE TABLE IF NOT EXISTS orders(
                     order_id SERIAL PRIMARY KEY,
-                    product_name VARCHAR(255),
-                    quantity INT,
                     status VARCHAR(255) DEFAULT 'pending',
                     total_amount FLOAT(20),
                     created_at TIMESTAMPTZ DEFAULT NOW(),
