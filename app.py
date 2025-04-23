@@ -224,11 +224,9 @@ def register_user():
             conn.commit()
             cur.close()
             conn.close()
-            return redirect(url_for('login'))
         except Exception as e:
             return jsonify({"message": "An error occurred while creating the user", "error": str(e)}), 500
-
-    return render_template('register.html')
+        return jsonify({"message": "Registered"})
 
 
 @app.route('/login', methods=['GET', 'POST'])
