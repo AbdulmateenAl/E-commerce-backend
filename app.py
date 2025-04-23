@@ -203,8 +203,12 @@ def stripe_webhook():
 @app.route('/register', methods=['GET', 'POST'])
 def register_user():
     if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
+        if request.content_type == 'application/json':
+            response = request.get_json()
+        else:
+            response = request.form
+        username = response.get('username')
+        password = response.get('password')
 
         if not username or not password:
             return jsonify({"message": "Missing username or password"}), 400
